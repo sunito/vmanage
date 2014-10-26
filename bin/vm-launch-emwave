@@ -1,0 +1,62 @@
+#!/usr/bin/env ruby
+# encoding: UTF-8
+
+require 'slop'
+
+command, cmd_args = ARGV
+
+command = command.gsub( '\\', '/')
+
+MACHINE = "w4d1"
+
+def sys args
+  puts args
+  system args
+end
+
+def display_status message, time=5
+  sys %Q(kdialog --passivepopup "#{message}" #{time})
+end  
+
+USB_VENDOR_ID = "0e30"
+def workaround_usb_error
+  usb_line  = `lsusb | grep #{USB_VENDOR_ID}`
+  usb_line =~ /Bus (\d+) Device (\d+)/
+  bus, device = $1, $2
+  vbox_addr = `VBoxManage list usbhost | grep #{bus}/#{device}`.sub(/Address:\s+/, "")
+  key_wait = 0.2
+#    sys %Q( ( sleep #{key_wait} ;xdotool key --window "$(xdotool search --name VirtualBox | head -n 1)" "space" )& )
+#    window_id = `xdotool search --name "VirtualBox -" |tail -1`
+  sys %Q( ( sleep #{key_wait} ;xdotool key --window "$(xdotool search --name "VirtualBox -" |tail -1)" "space" )& )
+  sys %Q( VBoxManage controlvm #{MACHINE} usbattach #{vbox_addr} )
+  sleep key_wait +0.1
+  sys %Q( VBoxManage controlvm #{MACHINE} usbattach #{vbox_addr} )
+end
+
+display_status "Starten von emWave ausgelöst", 1
+sys "VBoxManage modifyvm #{MACHINE} --usb on"
+sys "VBoxManage setextradata #{MACHINE} GUI/Seamless on"
+sys "VBoxManage startvm #{MACHINE}"
+
+
+11.times do |i|
+  sleep 0.5
+  result = sys %Q(VBoxManage guestcontrol #{MACHINE} execute --image "C:\\WINDOWS\\system32\\ipconfig.exe" --username sound --password manitu --wait-exit)
+  puts "Machine is " + (result  ? "responding" : "inaccessible")
+  if result 
+    workaround_usb_error
+
+    sys %Q(VBoxManage guestcontrol #{MACHINE} execute --image "#{command.gsub('/', '\\\\')}" --username sound --password manitu --wait-exit -- #{(cmd_args||[]).join(' ')})
+    sleep 0.7
+    
+    sys "VBoxManage controlvm #{MACHINE} savestate"
+    display_status "emWave beendet", 3
+    exit 0
+    
+  end
+  display_status "Warten auf virtuelle Maschine", 2 if (i+1) % 2 == 0
+  sleep 1.5
+end
+
+display_status "Starten von emWave war nicht erfolgreich", 10
+sys %Q( kdialog --msgbox "Starten von emWave war nicht erfolgreich" --title "emWave Start" )
