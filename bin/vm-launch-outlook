@@ -42,7 +42,7 @@ sys "VBoxManage setextradata #{MACHINE} GUI/Seamless on"
 sys "VBoxManage startvm #{MACHINE}"
 
 
-11.times do |i|
+17.times do |i|
   sleep 0.5
   result = sys %Q(VBoxManage guestcontrol #{MACHINE} execute --image "C:\\WINDOWS\\system32\\ipconfig.exe" --username sound --password manitu --wait-exit)
   puts "Machine is " + (result  ? "responding" : "inaccessible")
