@@ -42,24 +42,27 @@ sys "VBoxManage setextradata #{MACHINE} GUI/Seamless on"
 sys "VBoxManage startvm #{MACHINE}"
 
 
-17.times do |i|
+machine_blocked = 17.times do |i|
   sleep 0.5
   result = sys %Q(VBoxManage guestcontrol #{MACHINE} execute --image "C:\\WINDOWS\\system32\\ipconfig.exe" --username sound --password manitu --wait-exit)
   puts "Machine is " + (result  ? "responding" : "inaccessible")
   if result 
     #workaround_usb_error
-
-    sys %Q(VBoxManage guestcontrol #{MACHINE} execute --image "#{command.gsub('/', '\\\\')}" --username sound --password manitu --wait-exit -- #{(cmd_args||[]).join(' ')})
-    sleep 0.7
-    
-    sys "VBoxManage controlvm #{MACHINE} savestate"
-    display_status "#{APPNAME} beendet", 3
-    exit 0
-    
+    break false
   end
   display_status "Warten auf virtuelle Maschine", 2 if (i+1) % 2 == 0
   sleep 1.5
 end
 
-display_status "Starten von #{APPNAME} war nicht erfolgreich", 10
-sys %Q( kdialog --msgbox "Starten von #{APPNAME} war nicht erfolgreich" --title "#{APPNAME} Start" )
+if machine_blocked
+  display_status "Starten von #{APPNAME} war nicht erfolgreich", 10
+  sys %Q( kdialog --msgbox "Starten von #{APPNAME} war nicht erfolgreich" --title "#{APPNAME} Start" )    
+  exit 1
+else
+  sys %Q(VBoxManage guestcontrol #{MACHINE} execute --image "#{command.gsub('/', '\\\\')}" --username sound --password manitu --wait-exit -- #{(cmd_args||[]).join(' ')})
+  sleep 0.7
+  
+  sys "VBoxManage controlvm #{MACHINE} savestate"
+  display_status "#{APPNAME} beendet", 3
+  exit 0  
+end
