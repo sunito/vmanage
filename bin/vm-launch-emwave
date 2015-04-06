@@ -47,7 +47,7 @@ sys "VBoxManage startvm #{MACHINE}"
     workaround_usb_error
 
     sys %Q(VBoxManage guestcontrol #{MACHINE} execute --image "#{command.gsub('/', '\\\\')}" --username sound --password manitu --wait-exit -- #{(cmd_args||[]).join(' ')})
-    sleep 0.7
+    sleep 2
     
     sys "VBoxManage controlvm #{MACHINE} savestate"
     display_status "emWave beendet", 3
